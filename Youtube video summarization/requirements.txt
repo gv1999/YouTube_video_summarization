@@ -1,7 +1,0 @@
-yt-dlp
-torch
-torchvision
-torchaudio
-transformers
-Flask
-whisper
