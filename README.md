@@ -51,12 +51,6 @@ The app should now be running at `http://localhost:5000`.
 ### 4. Access the Web Interface
 Open a web browser and go to `http://localhost:5000` to enter a YouTube URL and get a summary.
 
-## Deploying to Vercel
-
-1. **Create a GitHub Repository**: Push your code to a GitHub repository.
-2. **Deploy on Vercel**: Connect your GitHub account to [Vercel](https://vercel.com), select your repository, and deploy your project.
-3. **Access Your Deployed Site**: Vercel will provide a link to access your live app.
-
 ## Usage
 
 1. Enter a YouTube URL in the input field.
