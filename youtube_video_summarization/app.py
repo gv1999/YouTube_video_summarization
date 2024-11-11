@@ -30,12 +30,37 @@ def download_audio(youtube_url, output_file='audio'):
         print(f"Error downloading audio: {e}")
     return None
 
+# Check and download English subtitles if available
+def download_subtitles(youtube_url):
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'subtitles': 'en',
+        'writesubtitles': True,
+        'outtmpl': 'subtitles',
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([youtube_url])
+        vtt_file = 'subtitles.en.vtt'
+        if os.path.exists(vtt_file):
+            return vtt_file
+    except Exception as e:
+        print(f"Error downloading subtitles: {e}")
+    return None
+
 # Transcribe audio using Whisper with GPU
 def transcribe_audio(audio_file):
     with torch.no_grad():
         result = whisper_model.transcribe(audio_file)
         torch.cuda.empty_cache()  # Clear GPU memory after transcription
     return result['text']
+
+# Extract text from subtitles
+def extract_subtitles(vtt_file):
+    with open(vtt_file, 'r') as file:
+        subtitles = file.read()
+    os.remove(vtt_file)  # Cleanup subtitle file
+    return subtitles
 
 # Split text into chunks for summarization
 def split_text(text, chunk_size=512):
@@ -73,7 +98,9 @@ def summarize_text_with_t5(text):
             del inputs, summary_ids
             torch.cuda.empty_cache()
 
-    return ' '.join(summaries)
+    # Return a more formal, newspaper-style summary
+    formatted_summary = "Video Summarization:\n" + "\n".join([f"- {summary.strip()}" for summary in summaries])
+    return formatted_summary
 
 @app.route('/')
 def index():
@@ -83,18 +110,26 @@ def index():
 def summarize():
     youtube_url = request.form['youtube_url']
     audio_file = download_audio(youtube_url)
+    subtitle_file = download_subtitles(youtube_url)
     summary = None
     
     try:
-        if audio_file:
+        if subtitle_file:
+            transcript = extract_subtitles(subtitle_file)
+        elif audio_file:
             transcript = transcribe_audio(audio_file)
-            summary = summarize_text_with_t5(transcript)
+        else:
+            raise Exception("No valid audio or subtitles found.")
+        
+        summary = summarize_text_with_t5(transcript)
     except Exception as e:
         print(f"Error processing video: {e}")
     finally:
-        # Ensure cleanup of audio file after processing, whether successful or not
+        # Ensure cleanup of files after processing
         if audio_file and os.path.exists(audio_file):
             os.remove(audio_file)
+        if subtitle_file and os.path.exists(subtitle_file):
+            os.remove(subtitle_file)
 
     if summary:
         return jsonify({'summary': summary})
